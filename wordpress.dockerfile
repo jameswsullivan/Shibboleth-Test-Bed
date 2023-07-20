@@ -24,7 +24,7 @@ RUN apt-get update -y && \
     apt-get install -y php8.1 php8.1-curl php8.1-mbstring php8.1-xml php8.1-gd && \
     apt-get install -y php8.1-imagick php8.1-dom php8.1-intl \
     php8.1-zip php8.1-mysql libapache2-mod-php && \
-    apt-get upgrade ca-certificates
+    apt-get upgrade ca-certificates -y
 
 # Configure PHP settings, remove apache default site configs.
 RUN rm -rf $APACHE_CONFG_DIR/* && \
