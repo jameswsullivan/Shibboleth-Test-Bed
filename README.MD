@@ -1,62 +1,51 @@
-## About This Project
+# Shibboleth Test Bed
 
-This project is designed to establish a fully functional lab environment to test the deployment of Shibboleth Identity Provider and Shibboleth Service Provider with WordPress and an LDAP server. The goal is to log in to WordPress via SSO using LDAP credentials.
+This project is attempting to establish a lab environment to test the deployment of Shibboleth Identity Provider and Shibboleth Service Provider with WordPress and an LDAP server. The goal is to log in to WordPress via SSO using credentials provided by the LDAP server.
 
-#### Components
+## Components
 
-- Test OpenLDAP server from https://github.com/rroemhild/docker-test-openldap, https://hub.docker.com/r/rroemhild/test-openldap/
-- Docker Ubuntu VNC Desktop from https://github.com/fcwu/docker-ubuntu-vnc-desktop, https://hub.docker.com/r/dorowu/ubuntu-desktop-lxde-vnc
+- Test OpenLDAP server:
+    - https://github.com/rroemhild/docker-test-openldap
+    - https://hub.docker.com/r/rroemhild/test-openldap
+- Docker Ubuntu VNC Desktop:
+    - https://github.com/fcwu/docker-ubuntu-vnc-desktop
+    - https://hub.docker.com/r/dorowu/ubuntu-desktop-lxde-vnc
 - Ubuntu/MySQL: https://hub.docker.com/r/ubuntu/mysql
-- WordPress running on Ubuntu.
+- WordPress running on LAMP stack on Ubuntu.
 - Shibboleth Service Provider V3.4.1
 - Shibboleth Identity Provider V4.3.0
 
-#### Docker Network
+## Start/stop the services
 
-docker network create --subnet=192.168.0.0/24 --gateway=192.168.0.1 shibnet
+```
+docker compose up -d
 
-#### List of containers and their IP assignment
-- wp.shibnet - WordPress - 192.168.0.2
-- db.shibnet - MySQL - 192.168.0.3
-- sp.shibnet - Shibboleth Service Provider - 192.168.0.4
-- idp.shibnet - Shibboleth Identity Provider - 192.168.0.5
-- ldap.shibnet - LDAP server - 192.168.0.6
-- pc.shibnet - Ubuntu desktop - 192.168.0.7
+docker compose down or docker compose down -v
+```
 
-#### Build images from Dockerfile
+## Run tests
 
-docker image build --tag shib-wp:1.0 --progress plain --no-cache . 2>&1 | Tee-Object build.log
+#### Test LDAP server
+From the `linux-pc`, run the following commands:
+```
+ldapsearch -H ldap://ldap-server:10389 -x -b "ou=people,dc=planetexpress,dc=com" -D "cn=admin,dc=planetexpress,dc=com" -w GoodNewsEveryone "(objectClass=inetOrgPerson)"
 
-docker image build --tag shib-db:1.0 --progress plain --no-cache . 2>&1 | Tee-Object build.log
+ldapsearch -x -b "dc=planetexpress,dc=com" -H ldap://ldap-server:10389 -D "cn=admin,dc=planetexpress,dc=com" -w GoodNewsEveryone "(cn=Hubert J. Farnsworth)" cn description displayName EnployeeType mail ou uid
+```
 
-docker image build --tag shib-sp:1.0 --progress plain --no-cache . 2>&1 | Tee-Object build.log
+#### Test Shibboleth SP
 
-docker image build --tag shib-idp:1.0 --progress plain --no-cache . 2>&1 | Tee-Object build.log
+- In the `shibboleth-sp` container, run:
+    - `shibd -t``, your should get `overall configuration is loadable, check console for non-fatal problems`.
+    - `apache2ctl configtest`, you should get `Syntax OK`.
+- From the `linux-pc` container, open Firefox:
+    - `http://shibboleth-sp/`, should show you the default apache landing page.
+    - `http://shibboleth-sp/Shibboleth.sso/Session`, you should see a message `A valid session was not found.`.
+    - `http://shibboleth-sp/Shibboleth.sso/Status`, you should see Shibboleth's default XML page.
 
-docker image build --tag shib-pc:base --progress plain --no-cache . 2>&1 | Tee-Object build.log
-
-
-#### Start the containers
-docker run -dit --name wp --network shibnet --ip 192.168.0.2 --hostname=wp.shibnet shib-wp:1.0
-
-docker run -dit --name db --network shibnet --ip 192.168.0.3 --hostname=db.shibnet shib-db:1.0
-
-docker run -dit --name sp --network shibnet --ip 192.168.0.4 --hostname=sp.shibnet shib-sp:1.0
-
-docker run -dit --name idp --network shibnet --ip 192.168.0.5 --hostname=idp.shibnet shib-idp:1.0
-
-docker run -dit --name ldap --network shibnet --ip 192.168.0.6 --hostname=ldap.shibnet rroemhild/test-openldap
-
-docker run -d --name pc --network shibnet --ip 192.168.0.7 --hostname=pc.shibnet -p 5900:5900 shib-pc:base
-
-
-#### Docker Compose Coming Soon
-
-Place holder text.
-
-
-#### Test LDAP Server
-
-ldapsearch -H ldap://192.168.0.6:10389 -x -b "ou=people,dc=planetexpress,dc=com" -D "cn=admin,dc=planetexpress,dc=com" -w GoodNewsEveryone "(objectClass=inetOrgPerson)"
-
-ldapsearch -x -b "dc=planetexpress,dc=com" -H ldap://192.168.0.6:10389 -D "cn=admin,dc=planetexpress,dc=com" -w GoodNewsEveryone "(cn=Hubert J. Farnsworth)" cn description displayName EnployeeType mail ou uid
+#### WordPress initialization
+From the `linux-pc`, visit `http://wordpress-web/` and perform the usual WordPress setup using the following database info:
+- Database host: `wordpress-mysql`
+- Database name: `wp`
+- Database user: `wordpress`
+- Database password: `1234`

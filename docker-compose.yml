@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  wordpress-mysql:
+    build:
+      context: .
+      dockerfile: mysql.dockerfile
+    image: wordpress-mysql:1.0.0
+    container_name: wordpress-mysql
+    hostname: wordpress-mysql
+    networks:
+      - shibboleth
+    volumes:
+      - wordpress-mysql:/var/lib/mysql
+  wordpress-web:
+    build:
+      context: .
+      dockerfile: wordpress.dockerfile
+    image: wordpress-web:1.0.0
+    container_name: wordpress-web
+    hostname: wordpress-web
+    networks:
+      - shibboleth
+    volumes:
+      - wordpress-web:/var/www/html
+    depends_on:
+      - wordpress-mysql
+  linux-pc:
+    build:
+      context: .
+      dockerfile: linuxpc.dockerfile
+    image: linux-pc:1.0.0
+    container_name: linux-pc
+    hostname: linux-pc
+    networks:
+      - shibboleth
+    volumes:
+      - linux-pc:/root
+    ports:
+      - 5900:5900
+  shibboleth-sp:
+    build:
+      context: ./Shibboleth-SP
+      dockerfile: ubuntu.dockerfile
+    image: shibboleth-sp:1.0.0
+    container_name: shibboleth-sp
+    hostname: shibboleth-sp
+    networks:
+      - shibboleth
+  shibboleth-idp:
+    build:
+      context: ./Shibboleth-IdP
+      dockerfile: Dockerfile
+    image: shibboleth-idp:1.0.0
+    container_name: shibboleth-idp
+    hostname: shibboleth-idp
+    networks:
+      - shibboleth
+  ldap-server:
+    image: rroemhild/test-openldap
+    container_name: ldap-server
+    hostname: ldap-server
+    networks:
+      - shibboleth
+
+networks:
+  shibboleth:
+
+volumes:
+  wordpress-mysql:
+    driver: local
+  wordpress-web:
+    driver: local
+  linux-pc:
+    driver: local
